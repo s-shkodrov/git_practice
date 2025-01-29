@@ -15,7 +15,7 @@
 12. [Best Practices](#best-practices)
 
 
-# 1. Overview
+## 1. Overview
 This document provides a detailed overview of the Terraform configuration designed to import and manage existing AWS resources across multiple environments (`test`, `dev`, `prod`). The primary objectives of this configuration are to:
 - Maintain consistency across environments.
 - Ensure scalability, reusability, and maintainability through modular design and best practices.
@@ -24,7 +24,7 @@ The Terraform configuration follows a **Master Class approach**, leveraging a we
 
 ---
 
-# 2. Directory Structure: A Master Class Approach
+## 2. Directory Structure: A Master Class Approach
 The directory structure is designed to promote modularity, reusability, and clear separation of concerns. This approach ensures that the configuration is scalable, maintainable, and easy to extend for future requirements.
 
 ```
@@ -74,7 +74,7 @@ project_root/
 
 ---
 
-# 3. Imported AWS Resources
+## 3. Imported AWS Resources
 All resources in this Terraform configuration are imported from AWS and managed using Terraform. The imported resources include:
 
 ### 3.1. VPC Module Configuration
@@ -244,7 +244,7 @@ The VPC module provides the following outputs for use in other modules or config
 | `subnet_ids`        | Map of subnet IDs                      | `map(string)` |
 
 
-# 4. EC2 Resource Configuration
+## 4. EC2 Resource Configuration
 
 The **EC2 Instances** are managed using a modular approach with dynamic resources created through `for_each` for specific environments. 
 The EC2 instances are defined in the module `modules/ec2/main.tf` and are configured using the `aws_instance` resource type. The configuration supports the creation of dynamic instances as well as three predefined instances 
@@ -387,7 +387,7 @@ output "instance_ids" {
 This EC2 configuration enables the creation of both dynamic and predefined EC2 instances, allowing flexibility for different environments while maintaining ease of use through input variables and outputs. The resource blocks are structured to ensure that each EC2 instance type is managed independently, with custom configuration options for each.
 
 ---
-# 5. ECR (Elastic Container Registry) Module Configuration
+## 5. ECR (Elastic Container Registry) Module Configuration
 
 The Elastic Container Registry (ECR) module is a key component of the Terraform configuration, responsible for managing container image repositories. This module ensures a consistent and automated approach to provisioning and maintaining ECR repositories across all environments.
 
@@ -467,7 +467,7 @@ The ECR module accepts the following input variables to customize repository cre
 
 This approach ensures an efficient and scalable solution for managing container image repositories in AWS using Terraform.
 
-# 6. Amazon RDS (Relational Database Service)
+## 6. Amazon RDS (Relational Database Service)
 
 ### 6.1 Overview
 Amazon Relational Database Service (RDS) is used to manage and scale relational database instances efficiently. This module provisions and maintains RDS instances across different environments, ensuring reliability, security, and high availability.
@@ -584,7 +584,7 @@ output "security_group_ids" {
 This module simplifies RDS management by providing a reusable, environment-agnostic configuration that supports efficient database provisioning and security compliance.
 
 
-# 7. S3 (Simple Storage Service)
+## 7. S3 (Simple Storage Service)
 
 The **S3 module** defines and manages Amazon S3 buckets used across various environments. These buckets provide object storage for backups, infrastructure state files, database storage, and public assets.
 
@@ -637,7 +637,7 @@ variable "s3_buckets" {
 ```
 ---
 
-# 8. Workspaces & Environment Configuration
+## 8. Workspaces & Environment Configuration
 Terraform workspaces are utilized to manage multiple environments (`prod`, `test`, `dev`). Each environment has a corresponding `tfvars` file, while a `shared.tfvars` file contains configurations common to all environments.
 
 ### 8.1 Workspace Setup
@@ -656,7 +656,7 @@ This approach ensures that shared resources are consistently applied while allow
 
 ---
 
-# 9. Usage & Deployment
+## 9. Usage & Deployment
 
 ### 9.1 Prerequisites
 - Install Terraform (`>=1.3.0`).
@@ -689,7 +689,7 @@ terraform destroy -var-file="shared.tfvars" -var-file="dev.tfvars"
 
 ---
 
-# 10. Variables
+## 10. Variables
 | Variable Name               | Description                                       |
 |-----------------------------|---------------------------------------------------|
 | `aws_region`                | AWS Region to deploy resources                   |
@@ -707,7 +707,7 @@ terraform destroy -var-file="shared.tfvars" -var-file="dev.tfvars"
 
 ---
 
-# 11. Outputs
+## 11. Outputs
 | Output Name          | Description                            |
 |----------------------|----------------------------------------|
 | `vpc_id`            | The ID of the shared VPC              |
@@ -717,7 +717,7 @@ terraform destroy -var-file="shared.tfvars" -var-file="dev.tfvars"
 
 ---
 
-# 12. Best Practices
+## 12. Best Practices
 - **Modular Design**: Use Terraform modules to encapsulate and reuse resource configurations.
 - **Avoid Hardcoding**: Leverage variables and `tfvars` files to parameterize configurations.
 - **Remote State Management**: Utilize Terraform remote state to maintain consistency and collaboration across teams.
