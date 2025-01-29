@@ -63,74 +63,234 @@ project_root/
 ## 3. Imported AWS Resources
 All resources in this Terraform configuration are imported from AWS and managed using Terraform. The imported resources include:
 
-### 3.1 VPC (Virtual Private Cloud)
-The VPC serves as the foundational networking layer shared across all environments. The following VPC-related resources are imported:
-- **DB Subnet Group**: `aws_db_subnet_group.rds`
-- **Route Tables**:
-  - `RDS-Pvt-rt`
-  - `default`
-- **Route Table Associations**:
-  - `association_1`
-  - `association_2`
-  - `association_3`
-- **Security Groups**:
-  - `Amazon-QuickSight-access-new`
-  - `Amazon_quicksight_access`
-  - `Test-Fargate-Security-Group`
-  - `default-1`
-  - `ec2-rds-1`
-  - `ec2-rds-2`
-  - `ec2-rds-3`
-  - `ec2-rds-4`
-  - `launch-wizard-1` to `launch-wizard-13`
-  - `rds-ec2-1` to `rds-ec2-4`
-  - `shelly-integrator`
-- **Subnets**:
-  - `RDS-Pvt-subnet-1` to `RDS-Pvt-subnet-3`
-  - `default`, `default-1`, `default-2`
-  - `shelly-integrator`
+### 3.1. VPC Module Configuration
 
-### 3.2 EC2 Instances
-Compute resources used for different applications across environments:
-- **Test**: EC2 instance `eaiot_test` and RDS instance `postgreaiotcloudtest`.
-- **Prod**: EC2 instances `eaiot_prod` and `eaiot_prod_old`, and RDS instance `postgreaiotcloud`.
-- **Dev**: EC2 instances `eaiot_dev` and `eaiot_dev_old`, and RDS instance `aiotclouddev`.
-- **Shared**: EC2 instances `builder`, `emqx_prod`, and `aiot_node_red`.
+The VPC module is a core component of the Terraform configuration, responsible for defining and managing the Virtual Private Cloud (VPC) and its associated resources. This module is designed to be highly reusable and configurable, allowing it to be easily adapted for different environments and use cases.
 
-### 3.3 ECR (Elastic Container Registry)
-Container registry for storing Docker images. All imported ECR repositories are shared across environments:
-- `aiotcloud/pg-backup`
-- `aiotcloud/photovoltaics`
-- `aiotcloud_dev/aiotcloud_api`
-- `aiotcloud_dev/aiotcloud_api_base`
-- `aiotcloud_dev/backend`
-- `aiotcloud_dev/celery_beat`
-- `aiotcloud_dev/celery_flower`
-- `aiotcloud_dev/celery_worker`
-- `aiotcloud_dev/emxq_certbot`
-- `aiotcloud_dev/emxq_nginx`
-- `aiotcloud_dev/frontend`
-- `aiotcloud_dev/nestwork`
-- `aiotcloud_dev/nginx`
-- `aiotcloud_dev/photovoltaics`
-- `aiotcloud_photovoltaics`
+### 3.2 Overview
+The VPC module creates and manages the following AWS resources:
+- **VPC**: The foundational networking layer.
+- **Route Tables**: Define routing rules for network traffic.
+- **Route Table Associations**: Associate subnets with route tables.
+- **Subnets**: Logical divisions within the VPC.
+- **Security Groups**: Act as virtual firewalls to control inbound and outbound traffic.
+- **DB Subnet Group**: A collection of subnets used for RDS instances.
 
-### 3.4 RDS (Relational Database Service)
-Managed relational database instances:
-- **Test**: RDS instance `postgreaiotcloudtest`.
-- **Prod**: RDS instance `postgreaiotcloud`.
-- **Dev**: RDS instance `aiotclouddev`.
+### 3.3 Key Features
+- **Dynamic Configuration**: Utilizes Terraform's `for_each` and `dynamic` blocks to create resources dynamically based on input variables.
+- **Modular Design**: Encapsulates all VPC-related resources within a single module, promoting reusability and maintainability.
+- **Flexible Inputs**: Accepts a wide range of input variables to customize the VPC configuration for different environments.
 
-### 3.5 S3 (Simple Storage Service)
-Storage buckets used across environments:
-- `aiot-backups-bucket`
-- `aiot-terraform-state`
-- `aiotcloud-db-storage`
-- `aiotcloud-photovoltaics`
-- `aiotcloud-rds-s31102023`
-- `publicaiotcloud`
+### 3.4 Detailed Configuration
 
----
+#### 3.4.1 VPC Creation
+The VPC is created using the `aws_vpc` resource. Key attributes include:
+- **CIDR Block**: Defined by the `cidr_block` input variable.
+- **DNS Support**: Enabled to allow DNS resolution within the VPC.
+- **DNS Hostnames**: Enabled to assign DNS hostnames to instances.
+
+```hcl
+resource "aws_vpc" "main" {
+  cidr_block           = var.cidr_block
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+}
+```
+
+#### 3.4.2 Route Tables
+Route tables are created dynamically using the `aws_route_table` resource. Each route table is configured with tags for better management and identification.
+
+```hcl
+resource "aws_route_table" "rtb" {
+  for_each = var.route_tables
+  vpc_id   = aws_vpc.main.id
+  tags     = { for t in each.value.tags : t.key => t.value }
+}
+```
+
+#### 3.4.3 Route Table Associations
+Route table associations are created to link subnets with route tables. The `aws_route_table_association` resource is used for this purpose.
+
+```hcl
+data "aws_subnet" "subnet" {
+  for_each = {
+    for assoc, details in var.route_table_associations : 
+    assoc => details.subnet_name
+  }
+  filter {
+    name   = "tag:Name"
+    values = [each.value]
+  }
+}
+
+resource "aws_route_table_association" "rta" {
+  for_each       = var.route_table_associations
+  route_table_id = aws_route_table.rtb[each.value.route_table_name].id
+  subnet_id      = data.aws_subnet.subnet[each.key].id
+}
+```
+
+#### 3.4.4 Subnets
+Subnets are created dynamically using the `aws_subnet` resource. Each subnet is configured with a CIDR block, name, and public IP assignment setting.
+
+```hcl
+resource "aws_subnet" "subnets" {
+  for_each                = var.subnets
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = each.value.cidr_block
+  map_public_ip_on_launch = each.value.map_public_ip_on_launch
+
+  tags = {
+    Name = each.value.subnet_name
+  }
+}
+```
+
+#### 3.4.5 Security Groups
+Security groups are created dynamically using the `aws_security_group` resource. Each security group is configured with ingress and egress rules to control traffic.
+
+```hcl
+resource "aws_security_group" "sg" {
+  for_each    = var.security_groups
+  name        = each.value.name
+  description = each.value.description
+  vpc_id      = aws_vpc.main.id
+
+  dynamic "ingress" {
+    for_each = each.value.ingress_rules
+    content {
+      from_port        = ingress.value.from_port
+      description      = ingress.value.description
+      to_port          = ingress.value.to_port
+      protocol         = ingress.value.protocol
+      cidr_blocks      = ingress.value.cidr_blocks
+      security_groups  = [for sg_name in ingress.value.security_groups : data.aws_security_group.sg[sg_name].id]
+      self             = ingress.value.self
+      ipv6_cidr_blocks = ingress.value.ipv6_cidr_blocks
+      prefix_list_ids  = ingress.value.prefix_list_ids
+    }
+  }
+
+  dynamic "egress" {
+    for_each = each.value.egress_rules
+    content {
+      from_port        = egress.value.from_port
+      description      = egress.value.description
+      to_port          = egress.value.to_port
+      protocol         = egress.value.protocol
+      cidr_blocks      = egress.value.cidr_blocks
+      security_groups  = [for sg_name in egress.value.security_groups : data.aws_security_group.sg[sg_name].id]
+      ipv6_cidr_blocks = egress.value.ipv6_cidr_blocks
+      prefix_list_ids  = egress.value.prefix_list_ids
+      self             = egress.value.self
+    }
+  }
+}
+
+data "aws_security_group" "sg" {
+  for_each = var.security_groups
+
+  filter {
+    name   = "group-name"
+    values = [each.value.name]
+  }
+}
+```
+
+#### 3.4.6 DB Subnet Group
+A DB subnet group is created for RDS instances using the `aws_db_subnet_group` resource. This group includes all subnets created within the VPC.
+
+```hcl
+resource "aws_db_subnet_group" "rds" {
+  name       = "rds-ec2-db-subnet-group-1"
+  description = "Created from the RDS Management Console"
+  subnet_ids = [for subnet in data.aws_subnet.subnet : subnet.id]
+}
+```
+
+### 3.5 Input Variables
+The VPC module accepts the following input variables to customize its configuration:
+
+| Variable Name               | Description                                       | Type        |
+|-----------------------------|---------------------------------------------------|-------------|
+| `cidr_block`                | CIDR block for the VPC                            | `string`    |
+| `route_tables`              | Map of route table configurations                 | `map(object)` |
+| `route_table_associations`  | Map of route table associations to subnets        | `map(object)` |
+| `security_groups`           | Map of security group configurations              | `map(object)` |
+| `subnets`                   | Map of subnet configurations                      | `map(object)` |
+| `subnet_ids`                | Map of subnet names to their IDs                  | `map(string)` |
+
+### 3.6 Outputs
+The VPC module provides the following outputs for use in other modules or configurations:
+
+| Output Name          | Description                            | Type        |
+|----------------------|----------------------------------------|-------------|
+| `vpc_id`            | The ID of the created VPC              | `string`    |
+| `security_group_ids` | Map of security group IDs              | `map(string)` |
+| `subnet_ids`        | Map of subnet IDs                      | `map(string)` |
+
+### 3.7 Usage Example
+To use the VPC module, include it in your Terraform configuration and provide the necessary input variables:
+
+```hcl
+module "vpc" {
+  source = "./modules/vpc"
+
+  cidr_block = "10.0.0.0/16"
+  route_tables = {
+    "rtb_1" = {
+      tags = [
+        { key = "Name", value = "rtb_1" }
+      ]
+    }
+  }
+  route_table_associations = {
+    "association_1" = {
+      route_table_name = "rtb_1"
+      subnet_name      = "subnet_1"
+    }
+  }
+  security_groups = {
+    "sg_1" = {
+      name        = "sg_1"
+      description = "Security Group 1"
+      ingress_rules = [
+        {
+          from_port   = 80
+          to_port     = 80
+          protocol    = "tcp"
+          cidr_blocks = ["0.0.0.0/0"]
+          description = "Allow HTTP traffic"
+          security_groups = []
+          self             = false
+          ipv6_cidr_blocks = []
+          prefix_list_ids  = []
+        }
+      ]
+      egress_rules = [
+        {
+          from_port   = 0
+          to_port     = 0
+          protocol    = "-1"
+          cidr_blocks = ["0.0.0.0/0"]
+          description = "Allow all outbound traffic"
+          security_groups = []
+          ipv6_cidr_blocks = []
+          prefix_list_ids  = []
+          self             = false
+        }
+      ]
+    }
+  }
+  subnets = {
+    "subnet_1" = {
+      cidr_block              = "10.0.1.0/24"
+      subnet_name             = "subnet_1"
+      map_public_ip_on_launch = true
+    }
+  }
+}
+```
 
 ## 4. Workspaces & Environment Configuration
 Terraform workspaces are utilized to manage multiple environments (`prod`, `test`, `dev`). Each environment has a corresponding `tfvars` file, while a `shared.tfvars` file contains configurations common to all environments.
