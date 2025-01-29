@@ -1,5 +1,3 @@
----
-
 # Terraform Infrastructure Documentation
 
 ## 1. Overview
