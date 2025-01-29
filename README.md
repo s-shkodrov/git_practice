@@ -49,9 +49,34 @@ All resources in this Terraform configuration are imported from AWS and managed 
   - **Test**: EC2 instance called "eaiot_test" and RDS instance called "postgreaiotcloudtest".
   - **Prod**: EC2 instances called "eaiot_prod" and "eaiot_prod_old", and RDS instance called "postgreaiotcloud".
   - **Dev**: EC2 instances called "eaiot_dev" and "eaiot_dev_old", and RDS instance called "aiotclouddev".
-- **ECR**: Container registry for storing Docker images.
+  - **Shared**: EC2 instances called "builder","emqx_prod" and "aiot_node_red".
+- **ECR**: Container registry for storing Docker images.All imported ECR repositories are used across all environments.
+  - "aiotcloud/pg-backup"
+  - "aiotcloud/photovoltaics"
+  - "aiotcloud_dev/aiotcloud_api"
+  - "aiotcloud_dev/aiotcloud_api_base"
+  - "aiotcloud_dev/backend"
+  - "aiotcloud_dev/celery_beat"
+  - "aiotcloud_dev/celery_flower"
+  - "aiotcloud_dev/celery_worker"
+  - "aiotcloud_dev/emxq_certbot"
+  - "aiotcloud_dev/emxq_nginx"
+  - "aiotcloud_dev/frontend"
+  - "aiotcloud_dev/nestwork"
+  - "aiotcloud_dev/nginx"
+  - "aiotcloud_dev/photovoltaics"
+  - "aiotcloud_photovoltaics"
 - **RDS**: Managed relational database instances.
-- **S3**: Storage buckets used across environments.
+  - **Test**: RDS instance called "postgreaiotcloudtest".
+  - **Prod**: RDS instance called "postgreaiotcloud".
+  - **Dev**: RDS instance called "aiotclouddev".
+- **S3**: Storage buckets used across environments.All imported S3 Buckets are used across all environments. 
+  - "aiot-backups-bucket"
+  - "aiot-terraform-state"
+  - "aiotcloud-db-storage"
+  - "aiotcloud-photovoltaics"
+  - "aiotcloud-rds-s31102023"
+  - "publicaiotcloud"
 
 ## 4. Workspaces & Environment Configuration
 Terraform workspaces are used to manage different environments. Each environment (`prod`, `test`, `dev`) has a corresponding `tfvars` file. Additionally, a `shared.tfvars` file contains common configurations that are applied to all environments.
@@ -65,7 +90,7 @@ terraform workspace select dev
 
 ### 4.2 How tfvars Files Are Used
 When running `terraform plan` or `terraform apply`, two `tfvars` files are always used:
-- `shared.tfvars`: Contains variables common to all environments.
+- `shared.tfvars`: Contains variables common to all environments, including the shared VPC configuration, subnets, route tables, route table associations, security groups, and three EC2 instances ("emqx_prod", "ec2_builder", and "aiot_node_red").
 - `<workspace>.tfvars`: Contains environment-specific variables (e.g., `dev.tfvars`, `prod.tfvars`).
 
 This approach ensures that shared resources do not conflict with environment-specific configurations.
