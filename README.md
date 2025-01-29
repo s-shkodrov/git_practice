@@ -125,16 +125,8 @@ terraform destroy -var-file="shared.tfvars" -var-file="dev.tfvars"
 - **Use Terraform modules** to ensure code reusability.
 - **Avoid hard-coded values** by using variables and tfvars files.
 - **Utilize Terraform remote state** to maintain consistency across environments.
-- **Implement IAM roles** with least privilege access for security.
-- **Regularly update Terraform providers** to ensure compatibility and security.
-- **Maintain proper tagging** of AWS resources for cost tracking and governance.
 - **Leverage `terraform import`** to bring existing AWS resources under Terraform management without recreating them.
 
 ---
 
-### Notes
-- This documentation will evolve as the infrastructure changes. Always update when modifying Terraform configurations.
-
----
-_Last Updated: [Insert Date]_
 
