@@ -44,7 +44,51 @@ project_root/
 
 ## 3. Imported AWS Resources
 All resources in this Terraform configuration are imported from AWS and managed using Terraform. The imported resources include:
-- **VPC**: The base networking layer shared across all environments.
+- **VPC**: The base networking layer shared across all environments. The following VPC-related resources are shared across environments:
+  - **DB Subnet Group**: aws_db_subnet_group.rds
+  - **Route Tables**:
+    - "RDS-Pvt-rt"
+    - "default"
+  - **Route Table Associations**:
+    - "association_1"
+    - "association_2"
+    - "association_3"
+  - **Security Groups**:
+    - "Amazon-QuickSight-access-new"
+    - "Amazon_quicksight_access"
+    - "Test-Fargate-Security-Group"
+    - "default-1"
+    - "ec2-rds-1"
+    - "ec2-rds-2"
+    - "ec2-rds-3"
+    - "ec2-rds-4"
+    - "launch-wizard-1"
+    - "launch-wizard-10"
+    - "launch-wizard-11"
+    - "launch-wizard-12"
+    - "launch-wizard-13"
+    - "launch-wizard-2"
+    - "launch-wizard-3"
+    - "launch-wizard-4"
+    - "launch-wizard-5"
+    - "launch-wizard-6"
+    - "launch-wizard-7"
+    - "launch-wizard-8"
+    - "launch-wizard-9"
+    - "rds-ec2-1"
+    - "rds-ec2-2"
+    - "rds-ec2-3"
+    - "rds-ec2-4"
+    - "shelly-integrator"
+  - **Subnets**:
+    - "RDS-Pvt-subnet-1"
+    - "RDS-Pvt-subnet-2"
+    - "RDS-Pvt-subnet-3"
+    - "default"
+    - "default-1"
+    - "default-2"
+    - "shelly-integrator"
+
 - **EC2 Instances**: Compute resources used for different applications.
   - **Test**: EC2 instance called "eaiot_test" and RDS instance called "postgreaiotcloudtest".
   - **Prod**: EC2 instances called "eaiot_prod" and "eaiot_prod_old", and RDS instance called "postgreaiotcloud".
