@@ -46,6 +46,9 @@ project_root/
 All resources in this Terraform configuration are imported from AWS and managed using Terraform. The imported resources include:
 - **VPC**: The base networking layer shared across all environments.
 - **EC2 Instances**: Compute resources used for different applications.
+  - **Test**: EC2 instance called "eaiot_test" and RDS instance called "postgreaiotcloudtest".
+  - **Prod**: EC2 instances called "eaiot_prod" and "eaiot_prod_old", and RDS instance called "postgreaiotcloud".
+  - **Dev**: EC2 instances called "eaiot_dev" and "eaiot_dev_old", and RDS instance called "aiotclouddev".
 - **ECR**: Container registry for storing Docker images.
 - **RDS**: Managed relational database instances.
 - **S3**: Storage buckets used across environments.
