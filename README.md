@@ -1,5 +1,22 @@
 # Terraform Infrastructure Documentation
 
+## Table of Contents
+1. [Overview](#overview)
+2. [Directory Structure](#directory-structure-a-master-class-approach)
+3. [Imported AWS Resources](#imported-aws-resources)
+4. [EC2 Resource Configuration](#ec2-resource-configuration)
+5. [ECR Module Configuration](#ecr-elastic-container-registry-module-configuration)
+6. [Amazon RDS Configuration](#amazon-rds-relational-database-service)
+7. [S3 Module Configuration](#s3-simple-storage-service)
+8. [Workspaces & Environment Configuration](#workspaces--environment-configuration)
+9. [Usage & Deployment](#usage--deployment)
+10. [Variables](#variables)
+11. [Outputs](#outputs)
+12. [Best Practices](#best-practices)
+
+---
+
+<a id="overview"></a>
 ## 1. Overview
 This document provides a detailed overview of the Terraform configuration designed to import and manage existing AWS resources across multiple environments (`test`, `dev`, `prod`). The primary objectives of this configuration are to:
 - Maintain consistency across environments.
@@ -9,6 +26,7 @@ The Terraform configuration follows a **Master Class approach**, leveraging a we
 
 ---
 
+<a id="directory-structure-a-master-class-approach"></a>
 ## 2. Directory Structure: A Master Class Approach
 The directory structure is designed to promote modularity, reusability, and clear separation of concerns. This approach ensures that the configuration is scalable, maintainable, and easy to extend for future requirements.
 
@@ -59,6 +77,7 @@ project_root/
 
 ---
 
+<a id="imported-aws-resources"></a>
 ## 3. Imported AWS Resources
 All resources in this Terraform configuration are imported from AWS and managed using Terraform. The imported resources include:
 
@@ -228,7 +247,9 @@ The VPC module provides the following outputs for use in other modules or config
 | `security_group_ids` | Map of security group IDs              | `map(string)` |
 | `subnet_ids`        | Map of subnet IDs                      | `map(string)` |
 
+---
 
+<a id="ec2-resource-configuration"></a>
 ## 4. EC2 Resource Configuration
 
 The **EC2 Instances** are managed using a modular approach with dynamic resources created through `for_each` for specific environments. 
@@ -372,7 +393,9 @@ output "instance_ids" {
 This EC2 configuration enables the creation of both dynamic and predefined EC2 instances, allowing flexibility for different environments while maintaining ease of use through input variables and outputs. The resource blocks are structured to ensure that each EC2 instance type is managed independently, with custom configuration options for each.
 
 ---
-### 5. ECR (Elastic Container Registry) Module Configuration
+
+<a id="ecr-elastic-container-registry-module-configuration"></a>
+## 5. ECR (Elastic Container Registry) Module Configuration
 
 The Elastic Container Registry (ECR) module is a key component of the Terraform configuration, responsible for managing container image repositories. This module ensures a consistent and automated approach to provisioning and maintaining ECR repositories across all environments.
 
@@ -381,8 +404,6 @@ The Elastic Container Registry (ECR) module is a key component of the Terraform 
 The ECR module creates and manages the following AWS resources:
 
 - **ECR Repositories**: Secure and scalable storage for container images.
-- **Repository Policies**: Optional policies for repository access control.
-- **Lifecycle Policies**: Rules to manage image retention and cleanup.
 
 ### 5.2 Key Features
 
@@ -454,6 +475,9 @@ The ECR module accepts the following input variables to customize repository cre
 
 This approach ensures an efficient and scalable solution for managing container image repositories in AWS using Terraform.
 
+---
+
+<a id="amazon-rds-relational-database-service"></a>
 ## 6. Amazon RDS (Relational Database Service)
 
 ### 6.1 Overview
@@ -550,7 +574,7 @@ variable "db_instances" {
 | `rds_instance_ids`  | Map of RDS instance IDs              | `map(string)` |
 | `security_group_ids` | List of security group IDs for RDS  | `map(string)` |
 
-##### Output Configuration:
+#### Output Configuration:
 
 ```hcl
 output "rds_instance_ids" {
@@ -570,7 +594,9 @@ output "security_group_ids" {
 
 This module simplifies RDS management by providing a reusable, environment-agnostic configuration that supports efficient database provisioning and security compliance.
 
+---
 
+<a id="s3-simple-storage-service"></a>
 ## 7. S3 (Simple Storage Service)
 
 The **S3 module** defines and manages Amazon S3 buckets used across various environments. These buckets provide object storage for backups, infrastructure state files, database storage, and public assets.
@@ -624,6 +650,7 @@ variable "s3_buckets" {
 ```
 ---
 
+<a id="workspaces--environment-configuration"></a>
 ## 8. Workspaces & Environment Configuration
 Terraform workspaces are utilized to manage multiple environments (`prod`, `test`, `dev`). Each environment has a corresponding `tfvars` file, while a `shared.tfvars` file contains configurations common to all environments.
 
@@ -643,6 +670,7 @@ This approach ensures that shared resources are consistently applied while allow
 
 ---
 
+<a id="usage--deployment"></a>
 ## 9. Usage & Deployment
 
 ### 9.1 Prerequisites
@@ -676,6 +704,7 @@ terraform destroy -var-file="shared.tfvars" -var-file="dev.tfvars"
 
 ---
 
+<a id="variables"></a>
 ## 10. Variables
 | Variable Name               | Description                                       |
 |-----------------------------|---------------------------------------------------|
@@ -694,6 +723,7 @@ terraform destroy -var-file="shared.tfvars" -var-file="dev.tfvars"
 
 ---
 
+<a id="outputs"></a>
 ## 11. Outputs
 | Output Name          | Description                            |
 |----------------------|----------------------------------------|
@@ -704,6 +734,7 @@ terraform destroy -var-file="shared.tfvars" -var-file="dev.tfvars"
 
 ---
 
+<a id="best-practices"></a>
 ## 12. Best Practices
 - **Modular Design**: Use Terraform modules to encapsulate and reuse resource configurations.
 - **Avoid Hardcoding**: Leverage variables and `tfvars` files to parameterize configurations.
@@ -712,7 +743,3 @@ terraform destroy -var-file="shared.tfvars" -var-file="dev.tfvars"
 - **Version Control**: Maintain Terraform configurations in a version-controlled repository to track changes and ensure reproducibility.
 
 ---
-
-This documentation reflects a **Master Class approach** to Terraform configuration, ensuring scalability, maintainability, and adherence to industry best practices. By following this structure and methodology, the infrastructure is well-positioned for future growth and evolution.
-
---- 
