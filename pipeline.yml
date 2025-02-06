@@ -1,0 +1,74 @@
+name: Parse and Deploy Artifact Log
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  parse-deployment-log:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        id: checkout
+
+      - name: Parse output.txt and extract artifact details
+        shell: pwsh
+        run: |
+          # Define the log file path
+          $logFile = "output.txt"
+
+          # Read the content of the log file
+          $logContent = Get-Content $logFile
+
+          # Extract artifact details: Type, Brand, Model, and Version
+          $artifactType = ($logContent | Select-String -Pattern 'Type\s*:\s*(\S+)').Matches.Groups[1].Value
+          $artifactBrand = ($logContent | Select-String -Pattern 'Brand\s*:\s*(\S+)').Matches.Groups[1].Value
+          $artifactModel = ($logContent | Select-String -Pattern 'Model\s*:\s*(\S+)').Matches.Groups[1].Value
+          $artifactVersion = ($logContent | Select-String -Pattern 'Version\s*:\s*(\S+)').Matches.Groups[1].Value
+
+          # Extract machine details, like the VM name (e.g., si0vmc3966)
+          $machineName = ($logContent | Select-String -Pattern 'VM\s*:\s*(\S+)').Matches.Groups[1].Value
+
+          # Extract DNS or IP address for the machine
+          $dns = ($logContent | Select-String -Pattern 'DNS\s*:\s*(\S+)').Matches.Groups[1].Value
+
+          # Check if the deployment was successful or failed
+          $deploymentStatus = if ($logContent -match 'Deployment\s+finished\s+successfully') {
+            "SUCCESS"
+          } elseif ($logContent -match 'Deployment\s+failed') {
+            "FAILURE"
+          } else {
+            "UNKNOWN"
+          }
+
+          # Output extracted information
+          Write-Host "Artifact Type: $artifactType"
+          Write-Host "Artifact Brand: $artifactBrand"
+          Write-Host "Artifact Model: $artifactModel"
+          Write-Host "Artifact Version: $artifactVersion"
+          Write-Host "Machine Name: $machineName"
+          Write-Host "Machine DNS: $dns"
+          Write-Host "Deployment Status: $deploymentStatus"
+
+          # Set extracted variables for use in other steps
+          echo "ARTIFACT_TYPE=$artifactType" >> $env:GITHUB_ENV
+          echo "ARTIFACT_BRAND=$artifactBrand" >> $env:GITHUB_ENV
+          echo "ARTIFACT_MODEL=$artifactModel" >> $env:GITHUB_ENV
+          echo "ARTIFACT_VERSION=$artifactVersion" >> $env:GITHUB_ENV
+          echo "MACHINE_NAME=$machineName" >> $env:GITHUB_ENV
+          echo "MACHINE_DNS=$dns" >> $env:GITHUB_ENV
+          echo "DEPLOYMENT_STATUS=$deploymentStatus" >> $env:GITHUB_ENV
+
+      - name: Display extracted values
+        run: |
+          echo "Artifact Type: ${{ env.ARTIFACT_TYPE }}"
+          echo "Artifact Brand: ${{ env.ARTIFACT_BRAND }}"
+          echo "Artifact Model: ${{ env.ARTIFACT_MODEL }}"
+          echo "Artifact Version: ${{ env.ARTIFACT_VERSION }}"
+          echo "Machine Name: ${{ env.MACHINE_NAME }}"
+          echo "Machine DNS: ${{ env.MACHINE_DNS }}"
+          echo "Deployment Status: ${{ env.DEPLOYMENT_STATUS }}"
+
