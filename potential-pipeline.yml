@@ -1,0 +1,47 @@
+name: Extract and Parse Log Information
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  parse-log:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Read and parse output.txt
+        run: |
+          $logFile = "output.txt"
+          $logContent = Get-Content -Path $logFile
+
+          # Extract Artifact Information
+          $artifactInfo = $logContent | Select-String -Pattern "Gathering File Information ARTIFACT -> (.*)" | ForEach-Object { $_.Matches.Groups[1].Value }
+          $artifactName = $artifactInfo
+          
+          # Extract Brand, Model, Version
+          $brand = ($logContent | Select-String -Pattern "Brand\s+->\s*(\w+)").Matches.Groups[1].Value
+          $model = ($logContent | Select-String -Pattern "Model\s+->\s*(\w+)").Matches.Groups[1].Value
+          $version = ($logContent | Select-String -Pattern "Version\s+->\s*(\S+)").Matches.Groups[1].Value
+
+          # Extract Deployment Success Status
+          $deploymentStatus = ($logContent | Select-String -Pattern "Supported\s+->\s*(\w+)").Matches.Groups[1].Value
+
+          # Set environment variables
+          echo "ARTIFACT_NAME=$artifactName" >> $env:GITHUB_ENV
+          echo "ARTIFACT_TYPE=eqs" >> $env:GITHUB_ENV
+          echo "ARTIFACT_BRAND=$brand" >> $env:GITHUB_ENV
+          echo "ARTIFACT_MODEL=$model" >> $env:GITHUB_ENV
+          echo "ARTIFACT_VERSION=$version" >> $env:GITHUB_ENV
+          echo "DEPLOYMENT_STATUS=$deploymentStatus" >> $env:GITHUB_ENV
+
+      - name: Output parsed information
+        run: |
+          echo "Artifact Name: ${{ env.ARTIFACT_NAME }}"
+          echo "Artifact Type: ${{ env.ARTIFACT_TYPE }}"
+          echo "Artifact Brand: ${{ env.ARTIFACT_BRAND }}"
+          echo "Artifact Model: ${{ env.ARTIFACT_MODEL }}"
+          echo "Artifact Version: ${{ env.ARTIFACT_VERSION }}"
+          echo "Deployment Status: ${{ env.DEPLOYMENT_STATUS }}"
