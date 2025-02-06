@@ -1,0 +1,104 @@
+running ORP CLI
+Listing contents of 
+
+    Directory: C:\GitHub\github-actions-runner\MFIEISW\2.303.0\win\SI0VM05631_MFIEISW_cx_server_1_1\_work\sync-test-bos
+ch-tz\sync-test-bosch-tz\ORP-Console-Win\bin
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d----          12/11/2024  1:16 PM                Debug
+d----          12/11/2024  1:16 PM                temp
+-a---           12/3/2024  5:15 PM          61440 ORP-Console-Win.exe
+-a---           11/8/2024  9:07 AM            184 ORP-Console-Win.exe.config
+-a---           12/3/2024  5:15 PM         114176 ORP-Console-Win.pdb
+-a---           11/8/2024  9:07 AM         804352 Renci.SshNet.dll
+-a---           11/8/2024  9:07 AM        1277428 Renci.SshNet.xml
+.\ORP-Console-Win.exe eqs_nk_analyzer5000-1-4-13.zip ../../POC_mono_repo_bosch/eqs/nk/analyzer5000
+2024/12/11 13:16:28.239 PM   INFO Ver 0.1  Started ORP-Script with Arguments eqs_nk_analyzer5000-1-4-13.zip ../../POC_mono_repo_bosch/eqs/nk/analyzer5000 
+2024/12/11 13:16:28.255 PM   INFO Gathering File Information ARTIFACT -> eqs_nk_analyzer5000-1-4-13.zip FROM -> ../../POC_mono_repo_bosch/eqs/nk/analyzer5000
+2024/12/11 13:16:28.270 PM   INFO FUN DataList.readDeploymentConfig() with Par .\temp\ORPconfig.xml START
+2024/12/11 13:16:28.286 PM   INFO INTERNAL Transfer Deployment information to DataList START
+2024/12/11 13:16:28.286 PM   INFO INTERNAL Transfer Deployment information to DataList FINISHED
+2024/12/11 13:16:28.286 PM   INFO FUN DataList.readDeploymentConfig() with Par .\temp\ORPconfig.xml FINISHED
+2024/12/11 13:16:28.286 PM   INFO FUN ZipAnalyzer.Analyze() with Par eqs_nk_analyzer5000-1-4-13.zip STARTED
+2024/12/11 13:16:28.286 PM   INFO INTERNAL ZipAnalyzer.Analyze() startsWith Result -> eqs_
+2024/12/11 13:16:28.286 PM   INFO INTERNAL ZipAnalyzer.GetBrandModelVersionWF_EQS() START
+2024/12/11 13:16:28.302 PM   INFO INTERNAL ZipAnalyzer.GetBrandModelVersionWF_EQS() with par eqs_nk_analyzer5000-1-4-13.zip RESULT -> Version 1-4-13 ; Brand nk ; Model analyzer5000 ; Area WF
+2024/12/11 13:16:28.302 PM   ************************************************
+2024/12/11 13:16:28.302 PM   ** Type      -> eqs
+2024/12/11 13:16:28.302 PM   ************************************************
+2024/12/11 13:16:28.302 PM   ** Brand     -> nk
+2024/12/11 13:16:28.302 PM   ************************************************
+2024/12/11 13:16:28.302 PM   ** Model     -> analyzer5000
+2024/12/11 13:16:28.302 PM   ************************************************
+2024/12/11 13:16:28.302 PM   ** Version   -> 1-4-13
+2024/12/11 13:16:28.302 PM   ************************************************
+2024/12/11 13:16:28.302 PM   ** Supported -> True
+2024/12/11 13:16:28.302 PM   ************************************************
+2024/12/11 13:16:28.302 PM   
+2024/12/11 13:16:28.302 PM   INFO Gathering James Config Informations from zip
+2024/12/11 13:16:28.302 PM   -------------------------------------------------
+2024/12/11 13:16:28.302 PM   ../../POC_mono_repo_bosch/eqs/nk/analyzer5000\eqs_nk_analyzer5000-1-4-13.zip
+2024/12/11 13:16:28.302 PM   NK209
+2024/12/11 13:16:28.302 PM   NT201
+2024/12/11 13:16:28.302 PM   NG101
+2024/12/11 13:16:28.302 PM   NT311
+2024/12/11 13:16:28.302 PM   ========================================
+2024/12/11 13:16:28.302 PM   INFO Try to generate DeploymentPlan ->
+2024/12/11 13:16:28.302 PM   INFO INTERNAL BIND -> Equipment NK209 TO si0vmc3966;
+2024/12/11 13:16:28.302 PM   INFO INTERNAL BIND -> Equipment NT201 TO si0vmc3966;
+2024/12/11 13:16:28.302 PM   INFO INTERNAL BIND -> Equipment NG101 TO si0vmc3966;
+2024/12/11 13:16:28.302 PM   INFO INTERNAL BIND -> Equipment NT311 TO si0vmc3966;
+2024/12/11 13:16:28.302 PM   INFO FUN GenerateDeploymentPlan() FINISHED
+2024/12/11 13:16:28.302 PM   INFO FUN Delivery Package START
+2024/12/11 13:16:28.302 PM   INFO REGION Upload / Unzip / Remove DeliveryPackages on Target Servers
+2024/12/11 13:16:28.348 PM   INFO INTERNAL SshSftp.Connect with par : si0vmc3966.de.bosch.com : 22 -> SUCCESSFUL
+2024/12/11 13:16:31.253 PM   INFO INTERNAL SshSftp.UploadFile with par FROM : ../../POC_mono_repo_bosch/eqs/nk/analyzer5000\eqs_nk_analyzer5000-1-4-13.zip TO /usr/local/systema/EI/EI_TIBCO/eqs_nk_analyzer5000-1-4-13.zip ON si0vmc3966.de.bosch.com : 22 -> EXECUTE
+2024/12/11 13:16:31.412 PM   INFO INTERNAL SshSftp.UploadFile with par FROM : ../../POC_mono_repo_bosch/eqs/nk/analyzer5000\eqs_nk_analyzer5000-1-4-13.zip TO /usr/local/systema/EI/EI_TIBCO/eqs_nk_analyzer5000-1-4-13.zip ON si0vmc3966.de.bosch.com : 22 -> FINISHED SUCCESSFUL
+2024/12/11 13:16:31.438 PM   INFO INTERNAL SshOrp.Connect with par : si0vmc3966.de.bosch.com : 22 -> SUCCESSFUL
+2024/12/11 13:16:31.685 PM   INFO INTERNAL SshOrp.SendCommand with COMMAND : unzip -n /usr/local/systema/EI/EI_TIBCO/eqs_nk_analyzer5000-1-4-13.zip -d /usr/local/systema/EI/EI_TIBCO/ ON si0vmc3966.de.bosch.com -> EXECUTE
+2024/12/11 13:16:31.782 PM   INFO INTERNAL SshOrp.SendCommand Result : Archive:  /usr/local/systema/EI/EI_TIBCO/eqs_nk_analyzer5000-1-4-13.zip
+
+2024/12/11 13:16:31.782 PM   INFO INTERNAL SshOrp.Connect with par : si0vmc3966.de.bosch.com : 22 -> SUCCESSFUL
+2024/12/11 13:16:32.034 PM   INFO INTERNAL SshOrp.SendCommand with COMMAND : rm /usr/local/systema/EI/EI_TIBCO/eqs_nk_analyzer5000-1-4-13.zip ON si0vmc3966.de.bosch.com -> EXECUTE
+2024/12/11 13:16:32.091 PM   INFO INTERNAL SshOrp.SendCommand Result : 
+2024/12/11 13:16:32.091 PM   INFO FUN ZipAnalyzer.Analyze() with Par eqs_nk_analyzer5000-1-4-13.zip STARTED
+2024/12/11 13:16:32.091 PM   INFO INTERNAL ZipAnalyzer.Analyze() startsWith Result -> eqs_
+2024/12/11 13:16:32.091 PM   INFO INTERNAL ZipAnalyzer.GetBrandModelVersionWF_EQS() START
+2024/12/11 13:16:32.091 PM   INFO INTERNAL ZipAnalyzer.GetBrandModelVersionWF_EQS() with par eqs_nk_analyzer5000-1-4-13.zip RESULT -> Version 1-4-13 ; Brand nk ; Model analyzer5000 ; Area WF
+2024/12/11 13:16:32.091 PM   INFO INTERNAL SshOrp.Connect with par : si0vmc3966.de.bosch.com : 22 -> SUCCESSFUL
+2024/12/11 13:16:32.347 PM   INFO INTERNAL SshOrp.SendCommand with COMMAND : mkdir /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/do_not_deploy_here ON si0vmc3966.de.bosch.com -> EXECUTE
+2024/12/11 13:16:32.404 PM   INFO INTERNAL SshOrp.SendCommand Result : 
+2024/12/11 13:16:32.404 PM   INFO INTERNAL SshOrp.Connect with par : si0vmc3966.de.bosch.com : 22 -> SUCCESSFUL
+2024/12/11 13:16:32.654 PM   INFO INTERNAL SshOrp.SendCommand with COMMAND : mv /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/*.sal.xml /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/do_not_deploy_here/ ON si0vmc3966.de.bosch.com -> EXECUTE
+2024/12/11 13:16:32.717 PM   INFO INTERNAL SshOrp.SendCommand Result : 
+2024/12/11 13:16:32.717 PM   INFO REGION Moving sal Files from exclude to include
+2024/12/11 13:16:32.717 PM   INFO INTERNAL SshOrp.Connect with par : si0vmc3966.de.bosch.com : 22 -> SUCCESSFUL
+2024/12/11 13:16:32.977 PM   INFO INTERNAL SshOrp.SendCommand with COMMAND : mv /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/do_not_deploy_here/EQS-NK209.sal.xml /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/ ON si0vmc3966.de.bosch.com -> EXECUTE
+2024/12/11 13:16:33.040 PM   INFO INTERNAL SshOrp.SendCommand Result : 
+2024/12/11 13:16:33.040 PM   INFO INTERNAL SshOrp.Connect with par : si0vmc3966.de.bosch.com : 22 -> SUCCESSFUL
+2024/12/11 13:16:33.305 PM   INFO INTERNAL SshOrp.SendCommand with COMMAND : mv /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/do_not_deploy_here/EQS_NK209.sal.xml /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/ ON si0vmc3966.de.bosch.com -> EXECUTE
+2024/12/11 13:16:33.383 PM   INFO INTERNAL SshOrp.SendCommand Result : 
+2024/12/11 13:16:33.383 PM   INFO INTERNAL SshOrp.Connect with par : si0vmc3966.de.bosch.com : 22 -> SUCCESSFUL
+2024/12/11 13:16:33.645 PM   INFO INTERNAL SshOrp.SendCommand with COMMAND : mv /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/do_not_deploy_here/EQS-NT201.sal.xml /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/ ON si0vmc3966.de.bosch.com -> EXECUTE
+2024/12/11 13:16:33.707 PM   INFO INTERNAL SshOrp.SendCommand Result : 
+2024/12/11 13:16:33.707 PM   INFO INTERNAL SshOrp.Connect with par : si0vmc3966.de.bosch.com : 22 -> SUCCESSFUL
+2024/12/11 13:16:33.958 PM   INFO INTERNAL SshOrp.SendCommand with COMMAND : mv /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/do_not_deploy_here/EQS_NT201.sal.xml /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/ ON si0vmc3966.de.bosch.com -> EXECUTE
+2024/12/11 13:16:34.036 PM   INFO INTERNAL SshOrp.SendCommand Result : 
+2024/12/11 13:16:34.036 PM   INFO INTERNAL SshOrp.Connect with par : si0vmc3966.de.bosch.com : 22 -> SUCCESSFUL
+2024/12/11 13:16:34.271 PM   INFO INTERNAL SshOrp.SendCommand with COMMAND : mv /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/do_not_deploy_here/EQS-NG101.sal.xml /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/ ON si0vmc3966.de.bosch.com -> EXECUTE
+2024/12/11 13:16:34.333 PM   INFO INTERNAL SshOrp.SendCommand Result : 
+2024/12/11 13:16:34.333 PM   INFO INTERNAL SshOrp.Connect with par : si0vmc3966.de.bosch.com : 22 -> SUCCESSFUL
+2024/12/11 13:16:34.578 PM   INFO INTERNAL SshOrp.SendCommand with COMMAND : mv /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/do_not_deploy_here/EQS_NG101.sal.xml /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/ ON si0vmc3966.de.bosch.com -> EXECUTE
+2024/12/11 13:16:34.656 PM   INFO INTERNAL SshOrp.SendCommand Result : 
+2024/12/11 13:16:34.656 PM   INFO INTERNAL SshOrp.Connect with par : si0vmc3966.de.bosch.com : 22 -> SUCCESSFUL
+2024/12/11 13:16:34.937 PM   INFO INTERNAL SshOrp.SendCommand with COMMAND : mv /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/do_not_deploy_here/EQS-NT311.sal.xml /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/ ON si0vmc3966.de.bosch.com -> EXECUTE
+2024/12/11 13:16:35.038 PM   INFO INTERNAL SshOrp.SendCommand Result : 
+2024/12/11 13:16:35.039 PM   INFO INTERNAL SshOrp.Connect with par : si0vmc3966.de.bosch.com : 22 -> SUCCESSFUL
+2024/12/11 13:16:35.274 PM   INFO INTERNAL SshOrp.SendCommand with COMMAND : mv /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/do_not_deploy_here/EQS_NT311.sal.xml /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/ ON si0vmc3966.de.bosch.com -> EXECUTE
+2024/12/11 13:16:35.337 PM   INFO INTERNAL SshOrp.SendCommand Result : 
+2024/12/11 13:16:35.337 PM   INFO REGION Removing temporary exclude folder on servers
+2024/12/11 13:16:35.337 PM   INFO INTERNAL SshOrp.Connect with par : si0vmc3966.de.bosch.com : 22 -> SUCCESSFUL
+2024/12/11 13:16:35.602 PM   INFO INTERNAL SshOrp.SendCommand with COMMAND : rm -rf /usr/local/systema/EI/EI_TIBCO/nk/analyzer5000/eqs/1-4-13/james/eqs/nk/analyzer5000/do_not_deploy_here/ ON si0vmc3966.de.bosch.com -> EXECUTE
+2024/12/11 13:16:35.713 PM   INFO INTERNAL SshOrp.SendCommand Result : 
+2024/12/11 13:16:35.713 PM   INFO Deplyoment FINISHED
