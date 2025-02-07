@@ -69,9 +69,9 @@
               }
 
                 $equipmentBindingsString = ExtractAndDisplayDetails -logContent $logContent
-                echo "::set-output name=equipmentBindings::$equipmentBindingsString"
+                echo "equipmentBindings=$equipmentBindingsString" >> $env:GITHUB_OUTPUT
               } else {
-                Write-Error "output.txt not found"
+                Write-Error "output.txt not found" 
               }
 
       - name: Attach Metadata to Artifact
