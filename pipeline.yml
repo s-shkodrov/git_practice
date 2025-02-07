@@ -1,74 +1,59 @@
-name: Parse and Deploy Artifact Log
+$logFile = "output.txt"
+$logContent = Get-Content -Path $logFile -Raw
 
-on:
-  push:
-    branches:
-      - main
+# Extract Artifact Information, Type, and Repository
+$artifactInfo = if ($logContent -match "Gathering File Information ARTIFACT ->\s*(.+?)\s*FROM ->\s*(.+)") {
+    $artifactName = $matches[1].Trim()
+    $repository = $matches[2].Trim()
+    "Artifact Name: $artifactName, Repository: $repository"
+} else { "Artifact not found, Repository not found" }
 
-jobs:
-  parse-deployment-log:
-    runs-on: windows-latest
+# Extract Brand, Model, Version
+$brand = if ($logContent -match "Brand\s+->\s*(\w+)") { $matches[1] } else { "Brand not found" }
+$model = if ($logContent -match "Model\s+->\s*(\w+)") { $matches[1] } else { "Model not found" }
+$version = if ($logContent -match "Version\s+->\s*([\d\-]+)") { $matches[1] } else { "Version not found" }
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-        id: checkout
+# Extract Deployment Status
+$deploymentStatus = if ($logContent -match "Supported\s+->\s*(True|False)") { $matches[1] } else { "Status not found" }
 
-      - name: Parse output.txt and extract artifact details
-        shell: pwsh
-        run: |
-          # Define the log file path
-          $logFile = "output.txt"
+# Extract Full DNS
+if ($logContent -match "INTERNAL SshOrp.Connect with par : (\S+) : 22 -> SUCCESSFUL") {
+    $fullDNS = $matches[1]
+} else {
+    $fullDNS = "DNS not found"
+}
 
-          # Read the content of the log file
-          $logContent = Get-Content $logFile
+# Extract Equipment Bindings
+$equipmentBindings = @()
+$logContent -match "INTERNAL BIND -> Equipment (\S+) TO (\S+);" -AllMatches | ForEach-Object {
+    $_.Matches | ForEach-Object {
+        $equipmentBindings += "Equipment: $($_.Groups[1].Value), Bound To: $($_.Groups[2].Value)"
+    }
+}
+$equipmentBindingsString = if ($equipmentBindings.Count -gt 0) { $equipmentBindings -join "`n" } else { "No equipment bindings found." }
 
-          # Extract artifact details: Type, Brand, Model, and Version
-          $artifactType = ($logContent | Select-String -Pattern 'Type\s*:\s*(\S+)').Matches.Groups[1].Value
-          $artifactBrand = ($logContent | Select-String -Pattern 'Brand\s*:\s*(\S+)').Matches.Groups[1].Value
-          $artifactModel = ($logContent | Select-String -Pattern 'Model\s*:\s*(\S+)').Matches.Groups[1].Value
-          $artifactVersion = ($logContent | Select-String -Pattern 'Version\s*:\s*(\S+)').Matches.Groups[1].Value
+# Extract Successful Operations
+$successfulOperations = @()
+$logContent -split "`r`n" | ForEach-Object {
+    if ($_ -match "INFO INTERNAL (\S+.*?)-> EXECUTE") {
+        $operation = $matches[1]
+        $index = [array]::IndexOf($logContent -split "`r`n", $_)
+        $nextLine = $logContent -split "`r`n"[$index + 1]
+        if ($nextLine -match "SUCCESSFUL") {
+            $successfulOperations += "$operation - Result: SUCCESSFUL"
+        }
+    }
+}
+$successfulOperationsString = if ($successfulOperations.Count -gt 0) { $successfulOperations -join "`n" } else { "No successful operations to display." }
 
-          # Extract machine details, like the VM name (e.g., si0vmc3966)
-          $machineName = ($logContent | Select-String -Pattern 'VM\s*:\s*(\S+)').Matches.Groups[1].Value
-
-          # Extract DNS or IP address for the machine
-          $dns = ($logContent | Select-String -Pattern 'DNS\s*:\s*(\S+)').Matches.Groups[1].Value
-
-          # Check if the deployment was successful or failed
-          $deploymentStatus = if ($logContent -match 'Deployment\s+finished\s+successfully') {
-            "SUCCESS"
-          } elseif ($logContent -match 'Deployment\s+failed') {
-            "FAILURE"
-          } else {
-            "UNKNOWN"
-          }
-
-          # Output extracted information
-          Write-Host "Artifact Type: $artifactType"
-          Write-Host "Artifact Brand: $artifactBrand"
-          Write-Host "Artifact Model: $artifactModel"
-          Write-Host "Artifact Version: $artifactVersion"
-          Write-Host "Machine Name: $machineName"
-          Write-Host "Machine DNS: $dns"
-          Write-Host "Deployment Status: $deploymentStatus"
-
-          # Set extracted variables for use in other steps
-          echo "ARTIFACT_TYPE=$artifactType" >> $env:GITHUB_ENV
-          echo "ARTIFACT_BRAND=$artifactBrand" >> $env:GITHUB_ENV
-          echo "ARTIFACT_MODEL=$artifactModel" >> $env:GITHUB_ENV
-          echo "ARTIFACT_VERSION=$artifactVersion" >> $env:GITHUB_ENV
-          echo "MACHINE_NAME=$machineName" >> $env:GITHUB_ENV
-          echo "MACHINE_DNS=$dns" >> $env:GITHUB_ENV
-          echo "DEPLOYMENT_STATUS=$deploymentStatus" >> $env:GITHUB_ENV
-
-      - name: Display extracted values
-        run: |
-          echo "Artifact Type: ${{ env.ARTIFACT_TYPE }}"
-          echo "Artifact Brand: ${{ env.ARTIFACT_BRAND }}"
-          echo "Artifact Model: ${{ env.ARTIFACT_MODEL }}"
-          echo "Artifact Version: ${{ env.ARTIFACT_VERSION }}"
-          echo "Machine Name: ${{ env.MACHINE_NAME }}"
-          echo "Machine DNS: ${{ env.MACHINE_DNS }}"
-          echo "Deployment Status: ${{ env.DEPLOYMENT_STATUS }}"
-
+# Outputting for visibility in script
+Write-Host "Artifact Info: $artifactInfo"
+Write-Host "Artifact Brand: $brand"
+Write-Host "Artifact Model: $model"
+Write-Host "Artifact Version: $version"
+Write-Host "Deployment Status: $deploymentStatus"
+Write-Host "Full DNS: $fullDNS"
+Write-Host "Equipment Bindings:"
+Write-Host $equipmentBindingsString
+Write-Host "Successful Operations:"
+Write-Host $successfulOperationsString
