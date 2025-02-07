@@ -1,59 +1,73 @@
-$logFile = "output.txt"
-$logContent = Get-Content -Path $logFile -Raw
+- name: Read and parse output.txt
+        run: |
+              $logFile = "output.txt"
+              $logContent = Get-Content -Path $logFile -Raw
 
-# Extract Artifact Information, Type, and Repository
-$artifactInfo = if ($logContent -match "Gathering File Information ARTIFACT ->\s*(.+?)\s*FROM ->\s*(.+)") {
-    $artifactName = $matches[1].Trim()
-    $repository = $matches[2].Trim()
-    "Artifact Name: $artifactName, Repository: $repository"
-} else { "Artifact not found, Repository not found" }
+              # Extract Artifact Information, Type, and Repository
+              $artifactInfo = if ($logContent -match "Gathering File Information ARTIFACT ->\s*(.+?)\s*FROM ->\s*(.+)") {
+                  $artifactName = $matches[1].Trim()
+                  $repository = $matches[2].Trim()
+                  "Artifact Name: $artifactName, Repository: $repository"
+              } else { "Artifact not found, Repository not found" }
 
-# Extract Brand, Model, Version
-$brand = if ($logContent -match "Brand\s+->\s*(\w+)") { $matches[1] } else { "Brand not found" }
-$model = if ($logContent -match "Model\s+->\s*(\w+)") { $matches[1] } else { "Model not found" }
-$version = if ($logContent -match "Version\s+->\s*([\d\-]+)") { $matches[1] } else { "Version not found" }
+              # Extract Brand, Model, Version
+              $brand = if ($logContent -match "Brand\s+->\s*(\w+)") { $matches[1] } else { "Brand not found" }
+              $model = if ($logContent -match "Model\s+->\s*(\w+)") { $matches[1] } else { "Model not found" }
+              $version = if ($logContent -match "Version\s+->\s*([\d\-]+)") { $matches[1] } else { "Version not found" }
 
-# Extract Deployment Status
-$deploymentStatus = if ($logContent -match "Supported\s+->\s*(True|False)") { $matches[1] } else { "Status not found" }
+              # Extract Deployment Status
+              $deploymentStatus = if ($logContent -match "Supported\s+->\s*(True|False)") { $matches[1] } else { "Status not found" }
 
-# Extract Full DNS
-if ($logContent -match "INTERNAL SshOrp.Connect with par : (\S+) : 22 -> SUCCESSFUL") {
-    $fullDNS = $matches[1]
-} else {
-    $fullDNS = "DNS not found"
-}
+              # Extract Full DNS
+              if ($logContent -match "INTERNAL SshOrp.Connect with par : (\S+) : 22 -> SUCCESSFUL") {
+                  $fullDNS = $matches[1]
+              } else {
+                  $fullDNS = "DNS not found"
+              }
 
-# Extract Equipment Bindings
-$equipmentBindings = @()
-Select-String -InputObject $logContent -Pattern "INTERNAL BIND -> Equipment (\S+) TO (\S+);" -AllMatches | ForEach-Object {
-    $_.Matches | ForEach-Object {
-        $equipmentBindings += "Equipment: $($_.Groups[1].Value), Bound To: $($_.Groups[2].Value)"
-    }
-}
-$equipmentBindingsString = if ($equipmentBindings.Count -gt 0) { $equipmentBindings -join "`n" } else { "No equipment bindings found." }
+              # Extract Equipment Bindings
+              $equipmentBindings = @()
+              Select-String -InputObject $logContent -Pattern "INTERNAL BIND -> Equipment (\S+) TO (\S+);" -AllMatches | ForEach-Object {
+                  $_.Matches | ForEach-Object {
+                      $equipmentBindings += "Equipment: $($_.Groups[1].Value), Bound To: $($_.Groups[2].Value)"
+                  }
+              }
+              $equipmentBindingsString = if ($equipmentBindings.Count -gt 0) { $equipmentBindings -join "`n" } else { "No equipment bindings found." }
 
-# Extract Successful Operations
-$successfulOperations = @()
-$logContent -split "`r`n" | ForEach-Object {
-    if ($_ -match "INFO INTERNAL (\S+.*?)-> EXECUTE") {
-        $operation = $matches[1]
-        $index = [array]::IndexOf($logContent -split "`r`n", $_)
-        $nextLine = $logContent -split "`r`n"[$index + 1]
-        if ($nextLine -match "-> SUCCESSFUL") {
-            $successfulOperations += "$operation - Result: SUCCESSFUL"
-        }
-    }
-}
-$successfulOperationsString = if ($successfulOperations.Count -gt 0) { $successfulOperations -join "`n" } else { "No successful operations to display." }
+              # Parsing the log lines
+              $logLines = $logContent -split "`r`n"
 
-# Outputting for visibility in script
-Write-Host "Artifact Info: $artifactInfo"
-Write-Host "Artifact Brand: $brand"
-Write-Host "Artifact Model: $model"
-Write-Host "Artifact Version: $version"
-Write-Host "Deployment Status: $deploymentStatus"
-Write-Host "Full DNS: $fullDNS"
-Write-Host "Equipment Bindings:"
-Write-Host $equipmentBindingsString
-Write-Host "Successful Operations:"
-Write-Host $successfulOperationsString
+              # Extract Successful Operations
+              $successfulOperations = @()
+              foreach ($i in 0..($logLines.Length - 1)) {
+                  if ($logLines[$i] -match "INFO INTERNAL (.+)-> EXECUTE") {
+                      $operation = $matches[1]
+
+                      # Check subsequent lines for a SUCCESSFUL result
+                      for ($j = $i + 1; $j -lt $logLines.Length; $j++) {
+                          if ($logLines[$j] -match "INFO INTERNAL .+ -> SUCCESSFUL") {
+                              $successfulOperations += "$operation - Result: SUCCESSFUL"
+                              break # Stop checking once a successful result is found for the operation
+                          }
+                      }
+                  }
+              }
+
+              # Convert successful operations into a displayable string
+              $successfulOperationsString = if ($successfulOperations.Count -gt 0) { 
+                  $successfulOperations -join "`n" 
+              } else { 
+                  "No successful operations to display." 
+              }
+
+              # Outputting for visibility in script
+              Write-Host "Artifact Info: $artifactInfo"
+              Write-Host "Artifact Brand: $brand"
+              Write-Host "Artifact Model: $model"
+              Write-Host "Artifact Version: $version"
+              Write-Host "Deployment Status: $deploymentStatus"
+              Write-Host "Full DNS: $fullDNS"
+              Write-Host "Equipment Bindings:"
+              Write-Host $equipmentBindingsString
+              Write-Host "Successful Operations:"
+              Write-Host $successfulOperationsString
