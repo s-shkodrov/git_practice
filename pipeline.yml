@@ -1,73 +1,99 @@
-- name: Read and parse output.txt
+ - name: Checkout another repository
+        uses: actions/checkout@v3
+        with:
+          repository: MFIEISW/sync-test-bosch-tz
+          ref: feature/ticket-255-send-notification-on-successful-orp-exec
+          token: ${{ secrets.GH_SECRET }} 
+
+      - name: Read and parse output.txt
+        id: parse_output
+        shell: pwsh
         run: |
-              $logFile = "output.txt"
+            $logFile = "output.txt"
+            if (Test-Path -Path $logFile) {
               $logContent = Get-Content -Path $logFile -Raw
+              function ExtractAndDisplayDetails {
+                  param([string]$logContent)
 
-              # Extract Artifact Information, Type, and Repository
-              $artifactInfo = if ($logContent -match "Gathering File Information ARTIFACT ->\s*(.+?)\s*FROM ->\s*(.+)") {
-                  $artifactName = $matches[1].Trim()
-                  $repository = $matches[2].Trim()
-                  "Artifact Name: $artifactName, Repository: $repository"
-              } else { "Artifact not found, Repository not found" }
-
-              # Extract Brand, Model, Version
+              # Extract and display artifact details
+              $artifactMatch = $logContent -match "Gathering File Information ARTIFACT ->\s*(.+?)\s*FROM ->\s*(.+)"
+              $artifactName = if ($artifactMatch) { $matches[1].Trim() } else { "Artifact not found" }
+              $repository = if ($artifactMatch) { $matches[2].Trim() } else { "Repository not found" }
+              $artifactType = if ($artifactName -match "^(eqs)_") { $matches[1] } else { "Type not specified" }
               $brand = if ($logContent -match "Brand\s+->\s*(\w+)") { $matches[1] } else { "Brand not found" }
               $model = if ($logContent -match "Model\s+->\s*(\w+)") { $matches[1] } else { "Model not found" }
               $version = if ($logContent -match "Version\s+->\s*([\d\-]+)") { $matches[1] } else { "Version not found" }
-
-              # Extract Deployment Status
               $deploymentStatus = if ($logContent -match "Supported\s+->\s*(True|False)") { $matches[1] } else { "Status not found" }
+              $fullDNS = if ($logContent -match "INTERNAL SshOrp.Connect with par : (\S+) : 22 -> SUCCESSFUL") { $matches[1] } else { "DNS not found" }
+              $area = if ($logContent -match "Area WF") { "WF" } else { "Area not specified" }
 
-              # Extract Full DNS
-              if ($logContent -match "INTERNAL SshOrp.Connect with par : (\S+) : 22 -> SUCCESSFUL") {
-                  $fullDNS = $matches[1]
-              } else {
-                  $fullDNS = "DNS not found"
-              }
-
-              # Extract Equipment Bindings
+              # Equipment bindings extraction
               $equipmentBindings = @()
-              Select-String -InputObject $logContent -Pattern "INTERNAL BIND -> Equipment (\S+) TO (\S+);" -AllMatches | ForEach-Object {
-                  $_.Matches | ForEach-Object {
-                      $equipmentBindings += "Equipment: $($_.Groups[1].Value), Bound To: $($_.Groups[2].Value)"
-                  }
+              $bindings = Select-String -InputObject $logContent -Pattern "INTERNAL BIND -> Equipment (\S+) TO (\S+);" -AllMatches
+              foreach ($match in $bindings.Matches) {
+                  $equipmentBindings += "Equipment: $($match.Groups[1].Value), Bound To: $($match.Groups[2].Value)"
               }
-              $equipmentBindingsString = if ($equipmentBindings.Count -gt 0) { $equipmentBindings -join "`n" } else { "No equipment bindings found." }
+              $equipmentBindingsString = $equipmentBindings -join ","
 
-              # Parsing the log lines
-              $logLines = $logContent -split "`r`n"
+              # Extract and Display Successful Operations
+                $successfulOperations = @()
+                $logLines = $logContent -split "`r`n"
+                foreach ($line in $logLines) {
+                    if ($line -match "INFO INTERNAL (.+)-> EXECUTE") {
+                        $operation = $matches[1]
+                        for ($i = [array]::IndexOf($logLines, $line) + 1; $i -lt $logLines.Length; $i++) {
+                            if ($logLines[$i] -match "-> SUCCESSFUL") {
+                                $successfulOperations += "$operation - Result: SUCCESSFUL"
+                                break
+                            }
+                        }
+                    }
+                }
+                $successfulOperationsString = if ($successfulOperations) { $successfulOperations -join "`n" } else { "No successful operations to display." }
 
-              # Extract Successful Operations
-              $successfulOperations = @()
-              foreach ($i in 0..($logLines.Length - 1)) {
-                  if ($logLines[$i] -match "INFO INTERNAL (.+)-> EXECUTE") {
-                      $operation = $matches[1]
-
-                      # Check subsequent lines for a SUCCESSFUL result
-                      for ($j = $i + 1; $j -lt $logLines.Length; $j++) {
-                          if ($logLines[$j] -match "INFO INTERNAL .+ -> SUCCESSFUL") {
-                              $successfulOperations += "$operation - Result: SUCCESSFUL"
-                              break # Stop checking once a successful result is found for the operation
-                          }
-                      }
-                  }
-              }
-
-              # Convert successful operations into a displayable string
-              $successfulOperationsString = if ($successfulOperations.Count -gt 0) { 
-                  $successfulOperations -join "`n" 
-              } else { 
-                  "No successful operations to display." 
-              }
-
-              # Outputting for visibility in script
-              Write-Host "Artifact Info: $artifactInfo"
+              # Display results
+              Write-Host "Artifact Name: $artifactName"
+              Write-Host "Repository: $repository"
+              Write-Host "Artifact Type: $artifactType"
               Write-Host "Artifact Brand: $brand"
               Write-Host "Artifact Model: $model"
               Write-Host "Artifact Version: $version"
               Write-Host "Deployment Status: $deploymentStatus"
               Write-Host "Full DNS: $fullDNS"
-              Write-Host "Equipment Bindings:"
-              Write-Host $equipmentBindingsString
-              Write-Host "Successful Operations:"
+              Write-Host "Area: $area"
+              Write-Host "Equipment Bindings: $equipmentBindingsString"
               Write-Host $successfulOperationsString
+              
+              # Return bindings for further use
+              return $equipmentBindingsString
+              }
+
+                $equipmentBindingsString = ExtractAndDisplayDetails -logContent $logContent
+                echo "::set-output name=equipmentBindings::$equipmentBindingsString"
+              } else {
+                Write-Error "output.txt not found"
+              }
+
+      - name: Attach Metadata to Artifact
+        if: success()
+        run: |
+            $orpPipelineTimestamp = (Get-Date -Format "o")
+            $filePath="mfi-ei-sw-local/playground_systema_deliveries/tz/eqc/vi/vtu6060/vi_vtu6060_1-7-1_javadoc.zip"
+            $orpPipelineRunId = "${{ github.run_id }}"
+            $orpPipelineRunLink = "https://github.boschdevcloud.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            $orpPipelineDeployment = $true
+            $equipmentBindingsString = "${{ steps.parse_output.outputs.equipmentBindings }}"
+            $jfrogUrl = "https://artifactory.boschdevcloud.com/artifactory"
+            $password = "cmVmdGtuOjAxOjE3NTQzMTkzODk6bEJzUmN1bmtlZGZNTzJFTzY2Y2V5Y0h2YVR6"
+             jf rt sp "$filePath" "equipmentBindingsString=$equipmentBindingsString\;orpPipelineTimestamp=$orpPipelineTimestamp\;orpPipelineRunId=$orpPipelineRunId\;orpPipelineRunLink=$orpPipelineRunLink\;orpPipelineDeployment=$orpPipelineDeployment" --url $jfrogUrl --password $password
+
+      - name: View Artifact Metadata
+        if: success()
+        run: |
+          $filePath="mfi-ei-sw-local/playground_systema_deliveries/tz/eqc/vi/vtu6060/vi_vtu6060_1-7-1_javadoc.zip"
+          $jfrogUrl = "https://artifactory.boschdevcloud.com/artifactory"
+          $password = "cmVmdGtuOjAxOjE3NTQzMTkzODk6bEJzUmN1bmtlZGZNTzJFTzY2Y2V5Y0h2YVR6"
+          echo "Fetching metadata for artifact at $env:filePath..."
+          jf rt search "$filePath" --url $jfrogUrl --password $password
+        env:
+          JFROG_CLI_LOG_LEVEL: ERROR 
