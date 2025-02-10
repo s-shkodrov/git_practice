@@ -1,0 +1,59 @@
+{
+    "@type": "MessageCard",
+    "@context": "http://schema.org/extensions",
+    "themeColor": "dc3545",
+    "summary": "Jenkins Build Failure Notification",
+    "title": "❌ projectType Deployment on DEPLOYMENT_ENVIRONMENT Failed<br><br>",
+    "text": "**⚠️ The deployment pipeline has failed.**<br><br>**Deployment Details:**<br><br>**Investigate Failure:** [Investigate Pipeline](PIPELINE_URL)<br>",
+   "sections": [
+        {
+            "facts": [
+                {
+                    "name": "📅 Deployment Date",
+                    "value": "**DEPLOYMENT_DATE**"
+                },
+                {
+                    "name": "🌍 Deployment Environment",
+                    "value": "**DEPLOYMENT_ENVIRONMENT**"
+                },
+                {
+                    "name": "⏳ Pipeline Duration", 
+                    "value": "**BUILD_DURATION**"
+                },
+                {
+                    "name": "🔑 Commit SHA",
+                    "value": "**COMMIT_SHA**"
+                }
+            ]
+        },
+        {
+            "activityTitle": "🔗 **Deployment Images:**",
+            "facts": [
+                {
+                    "name": "",
+                    "value": "🔗 [**View projectType Image**](apiImage)"
+                },
+                {
+                    "name": "",
+                    "value": "🔗 [**View Nestwork Image**](nestworkImage)"
+                }
+            ]
+        }
+    ],
+    "potentialAction": [
+        {
+            "@type": "OpenUri",
+            "name": "🔍 View Pipeline",
+            "targets": [
+                { "os": "default", "uri": "PIPELINE_URL" }
+            ]
+        },
+        {
+            "@type": "OpenUri",
+            "name": "🔗 View Commit",
+            "targets": [
+                { "os": "default", "uri": "BRANCH_URL" }
+            ]
+        }
+    ]
+}
