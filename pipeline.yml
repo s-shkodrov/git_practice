@@ -25,7 +25,7 @@
               $version = if ($logContent -match "Version\s+->\s*([\d\-]+)") { $matches[1] } else { "Version not found" }
               $deploymentStatus = if ($logContent -match "Supported\s+->\s*(True|False)") { $matches[1] } else { "Status not found" }
               $fullDNS = if ($logContent -match "INTERNAL SshOrp.Connect with par : (\S+) : 22 -> SUCCESSFUL") { $matches[1] } else { "DNS not found" }
-              $area = if ($logContent -match "Area WF") { "WF" } else { "Area not specified" }
+              $area = if ($logContent -match "Area\s+->\s*(\w+)") { $matches[1] } else { "Area not found" }
 
               # Equipment bindings extraction
               $equipmentBindings = @()
