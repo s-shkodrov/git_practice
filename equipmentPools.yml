@@ -1,0 +1,8 @@
+equipment_pools:
+  Pool_A:
+    equipment:
+      - equipment_1
+      - equipment_2
+  Pool_B:
+    equipment:
+      - equipment_3
