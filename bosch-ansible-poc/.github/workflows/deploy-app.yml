@@ -1,0 +1,117 @@
+name: Deploy App 
+
+on:
+  repository_dispatch:
+    types: [do_deploy_app]
+  workflow_dispatch:
+    inputs:
+      artifact_name:
+        description: 'Name of the artifact to deploy'
+        required: true
+        default: 'newApp_1.0-eq1_and_eq3.zip'
+      artifactory_path:
+        description: 'Path to artifact in Artifactory'
+        required: true
+        default: 'mfi-ei-sw-local/playground_bosch_deliveries/ansible-poc'
+
+jobs:
+  notify:
+    runs-on: [ 'self-hosted', 'ENV_PROD', 'NET_SL3', 'OS_LIN' ]
+    env:
+      EVENT_TYPE: ${{ github.event.action }}
+      ARTIFACT_NAME: ${{ github.event.inputs.artifact_name || github.event.client_payload.artifact_name }}
+      ARTIFACTORY_PATH: ${{ github.event.inputs.artifactory_path || github.event.client_payload.path }}
+      REPO_KEY: ${{ github.event.client_payload.repo_key }}
+      SHA256: ${{ github.event.client_payload.sha256 }}
+      SIZE: ${{ github.event.client_payload.size }}
+      ARTIFACTORY_URL_BASE: 'https://artifactory.boschdevcloud.com/artifactory'
+     # CLIENT_PAYLOAD: ${{ github.event.client_payload }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Display webhook payload (for debugging)
+        run: cat "${{ github.event_path }}"
+
+      # Step 1: Download artifact
+      - name: Download artifact from Artifactory
+        run: |
+          jf rt dl ${{ env.ARTIFACTORY_PATH }}/${{ env.ARTIFACT_NAME }} \
+            --flat=true \
+            --detailed-summary=true \
+            --url ${{ env.ARTIFACTORY_URL_BASE }} \
+            --password "${{ secrets.PERSONAL_TOKEN_FOR_ARTIFACTORY }}"
+
+      # Step 2: Run Ansible playbook
+      - name: Run Ansible playbook
+        env:
+          DESTINATION_FOLDER: '/tmp/ansible'
+          PERSONAL_TOKEN_FOR_ARTIFACTORY: ${{ secrets.PERSONAL_TOKEN_FOR_ARTIFACTORY }}
+          CX_DEV_MFI_NOTIFICATION_WEBHOOK: ${{ secrets.CX_DEV_MFI_NOTIFICATION_WEBHOOK }}
+        run: |
+          echo "${{ secrets.crd1si_pass }}" | ansible-playbook -i inventory.yml deploy.yml \
+            --ask-pass \
+            --extra-vars 'app_zip_path=${{ env.ARTIFACT_NAME }} extract_path=${{ env.DESTINATION_FOLDER }}'
+
+      # Step 3: Display generated Teams JSON notification (for debugging)
+      - name: Display generated Teams notification JSON
+        run: cat /tmp/new_app_release_teams_notification.json
+
+      # Step 3 (alternative): Upload Ansible log as artifact
+      - name: Upload Ansible Logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: ansible-log
+          path: /tmp/ansible-deployment.log
+
+      - name: Show Ansible Deployment Log
+        run: cat /tmp/ansible-deployment.log
+
+      - name: Print Deployment Log YAML
+        run: cat app_deployment.log.yaml
+
+      # Step 4: Extract details from the latest deployment log entry
+      - name: Extract deployment details from Ansible log
+        id: extract-details
+        shell: /usr/bin/bash -e {0}
+        run: |
+          LOG_FILE="/tmp/ansible-deployment.log"
+          sleep 5
+          # Extract only the most recent deployment entry (from last occurrence of 'zip_name=' onward)
+          LATEST_DEPLOYMENT=$(awk -v zip="$SELECTED_ZIP" '
+          $0 ~ "zip_name=" zip {found=1} found' "$LOG_FILE" | tail -n 20)
+          # Extract values from the latest deployment block
+          ZIP_NAME=$(echo "$LATEST_DEPLOYMENT" | grep -oP 'zip_name=\K.*' | tail -1 | xargs)
+          DEPLOY_PATH=$(echo "$LATEST_DEPLOYMENT" | grep -oP 'deploy_path=\K.*' | tail -1 | xargs)
+          TARGET_VMS=$(echo "$LATEST_DEPLOYMENT" | grep -oP 'target_vms=\K.*' | tail -1 | xargs)
+          EQUIPMENTS=$(echo "$LATEST_DEPLOYMENT" | grep -oP 'equipments=\K.*' | tail -1 | xargs)
+          ARTIFACT_SIZE=$(echo "$LATEST_DEPLOYMENT" | grep -oP 'artifact_size=\K.*' | tail -1 | xargs)
+          ARTIFACT_SHA256=$(echo "$LATEST_DEPLOYMENT" | grep -oP 'artifact_sha256=\K.*' | tail -1 | xargs)
+          REPO_KEY=$(echo "$LATEST_DEPLOYMENT" | grep -oP 'repo_key=\K.*' | tail -1 | xargs)
+
+          # Extract JFrog response safely (ensuring only the latest)
+          JFROG_RESPONSE=$(echo "$LATEST_DEPLOYMENT" | awk '/jfrog_response=/{p=1} p' | tail -n 5 | sed 's/jfrog_response=//g' | xargs)
+
+          # Set outputs for GitHub Actions
+          echo "zip_name=${ZIP_NAME}" >> $GITHUB_ENV
+          echo "deploy_path=${DEPLOY_PATH}" >> $GITHUB_ENV
+          echo "target_vms=${TARGET_VMS}" >> $GITHUB_ENV
+          echo "equipments=${EQUIPMENTS}" >> $GITHUB_ENV
+          echo "artifact_size=${ARTIFACT_SIZE}" >> $GITHUB_ENV
+          echo "artifact_sha256=${ARTIFACT_SHA256}" >> $GITHUB_ENV
+          echo "repo_key=${REPO_KEY}" >> $GITHUB_ENV
+          echo "jfrog_response=${JFROG_RESPONSE}" >> $GITHUB_ENV
+
+      # Step 5: Generate Job Summary in GitHub Actions
+      - name: Generate Job Summary
+        run: |
+          echo "# Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Zip File:** ${{ env.zip_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed to Path:** ${{ env.deploy_path }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Target VMs:** ${{ env.target_vms }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Equipments:** ${{ env.equipments }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Artifact Size:** ${{ env.artifact_size }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Artifact SHA256:** ${{ env.artifact_sha256 }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Repo Key:** ${{ env.repo_key }}" >> $GITHUB_STEP_SUMMARY
+          echo "**JFrog Response:** $(echo "${{ env.jfrog_response }}" | jq -c '.' 2>/dev/null || echo "${{ env.jfrog_response }}")" >> $GITHUB_STEP_SUMMARY
