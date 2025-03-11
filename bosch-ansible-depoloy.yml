@@ -1,0 +1,194 @@
+---
+- name: Determine target VMs based on zip content and equipment pools
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+    - name: Load inventory file
+      ansible.builtin.include_vars:
+        file: "{{ inventory_path }}"
+      when: inventory_path is defined
+
+    - name: Load equipment pools file
+      ansible.builtin.include_vars:
+        file: "{{ equipment_pools_path }}"
+      when: equipment_pools_path is defined
+
+    - name: Extract equipment names from the zip file
+      ansible.builtin.shell: |
+        unzip -l {{ app_zip_path }} | grep -oP 'equipment_\d+\.xml' | grep -oP 'equipment_\d+'
+      register: zip_equipments
+      changed_when: false
+
+    - name: Set fact for equipments_in_zip
+      ansible.builtin.set_fact:
+        equipments_in_zip: "{{ zip_equipments.stdout_lines }}"
+
+    - name: Dynamically determine target VMs
+      ansible.builtin.set_fact:
+        target_vms: "{{ (target_vms | default([])) + server_pool.hosts.keys() | list }}"
+      vars:
+        server_pool: "{{ item.value }}"
+        equipment_pool: "{{ equipment_pools[server_pool.vars.equipment_pool].equipment }}"
+        matching_equipment: "{{ equipments_in_zip | intersect(equipment_pool) }}"
+      loop: "{{ all.children | dict2items }}"
+      when:
+        - equipments_in_zip is defined
+        - matching_equipment | length > 0
+
+    - name: Ensure target_vms is defined and not empty
+      ansible.builtin.assert:
+        that:
+          - target_vms is defined
+          - target_vms | length > 0
+        fail_msg: "target_vms is undefined or empty after processing."
+
+    - name: Add target VMs to dynamic group
+      ansible.builtin.add_host:
+        name: "{{ item }}"
+        groups: deploy_targets
+      loop: "{{ target_vms }}"
+
+    - name: Log deployment result
+      ansible.builtin.lineinfile:
+        path: "app_deployment.log"
+        line: "Equipments {{ equipments_in_zip }} match to {{ target_vms }}"
+        create: yes
+
+    - name: Produce machine-readable initial deployment results
+      ansible.builtin.copy:
+        dest: "app_deployment.log.yaml"
+        content: |
+          ---
+          equipments: {{ equipments_in_zip | to_yaml }}
+          target_vms: {{ target_vms | to_yaml }}
+          status: "success"
+        mode: '0644'
+
+- name: Deliver zip to target VMs
+  hosts: deploy_targets
+  gather_facts: no
+
+  tasks:
+    - name: Create subfolder based on the zip file name
+      ansible.builtin.file:
+        path: "{{ extract_path }}/{{ app_zip_path | basename | regex_replace('.zip$', '') }}"
+        state: directory
+        mode: '0755'
+
+    - name: Unzip file into the subfolder
+      ansible.builtin.unarchive:
+        src: "{{ app_zip_path }}"
+        dest: "{{ extract_path }}/{{ app_zip_path | basename | regex_replace('.zip$', '') }}/"
+        remote_src: no
+        mode: '0644'
+        extra_opts:
+          - -o
+      register: unzip_result
+
+    - name: Append deployment results per VM
+      ansible.builtin.blockinfile:
+        path: "app_deployment.log.yaml"
+        block: |
+          - host: "{{ inventory_hostname }}"
+            path: "{{ extract_path }}/{{ app_zip_path | basename | regex_replace('.zip$', '') }}"
+            zip_file: "{{ app_zip_path }}"
+            extracted_files: "{{ unzip_result.files | default([]) }}"
+            changed: "{{ unzip_result.changed }}"
+        marker: "# {mark} DEPLOYMENT {{ inventory_hostname }}"
+        create: no
+      delegate_to: localhost
+
+- name: Attach metadata to Artifactory
+  hosts: localhost
+  gather_facts: no
+  vars:
+    bdc_artifactory_url: "{{ lookup('env', 'ARTIFACTORY_URL_BASE') }}"
+    personal_token: "{{ lookup('env', 'PERSONAL_TOKEN_FOR_ARTIFACTORY') }}"
+    orp_pipeline_run_id: "{{ lookup('env', 'GITHUB_RUN_ID') }}"
+    orp_pipeline_run_link: "https://github.boschdevcloud.com/{{ lookup('env', 'GITHUB_REPOSITORY') }}/actions/runs/{{ lookup('env', 'GITHUB_RUN_ID') }}"
+    timestamp: "{{ lookup('pipe', 'date \"+%d-%m-%Y %H:%M\"') }}"
+    orp_pipeline_deployment: "true"
+    metadata_log: "/tmp/ansible-deployment.log"
+
+  tasks:
+    - name: Get artifact file details
+      ansible.builtin.stat:
+        path: "{{ app_zip_path }}"
+        checksum_algorithm: sha256
+      register: artifact_details
+
+    - name: Set artifact details facts explicitly
+      ansible.builtin.set_fact:
+        artifact_size: "{{ artifact_details.stat.size }}"
+        artifact_sha256: "{{ artifact_details.stat.checksum }}"
+        artifact_repo_key: "{{ artifactory_path.split('/')[0] }}"
+      vars:
+        artifactory_path: "{{ lookup('env', 'ARTIFACTORY_PATH') | default('mfi-ei-sw-local/playground_bosch_deliveries/ansible-poc', true) }}"
+
+    - name: Log metadata before attaching to Artifactory
+      ansible.builtin.lineinfile:
+        path: "{{ metadata_log }}"
+        line: |
+          zip_name={{ app_zip_path }}
+          deploy_path={{ extract_path }}/{{ app_zip_path | basename | regex_replace('.zip$', '') }}
+          target_vms={{ target_vms | join(', ') }}
+          orpPipelineTimestamp={{ timestamp }}
+          equipments={{ equipments_in_zip | join(', ') }}
+          orpPipelineRunId={{ orp_pipeline_run_id }}
+          orpPipelineRunLink={{ orp_pipeline_run_link }}
+          orpPipelineDeployment={{ orp_pipeline_deployment }}
+          artifact_size={{ artifact_size }}
+          artifact_sha256={{ artifact_sha256 }}
+          repo_key={{ artifact_repo_key }}
+        create: yes
+
+    - name: Attach metadata to Artifactory
+      ansible.builtin.command: >
+        jf rt sp "mfi-ei-sw-local/playground_bosch_deliveries/ansible-poc/{{ app_zip_path }}"
+        "orpPipelineTimestamp={{ timestamp }}\;
+        orpPipelineRunId={{ orp_pipeline_run_id }}\;
+        orpPipelineRunLink={{ orp_pipeline_run_link }}\;
+        orpPipelineDeployment={{ orp_pipeline_deployment }}\;
+        artifact_size={{ artifact_details.stat.size }}\;
+        artifact_sha256={{ artifact_details.stat.checksum }}"
+        --url "{{ bdc_artifactory_url }}"
+        --password "{{ personal_token }}"
+      environment:
+        JFROG_CLI_LOG_LEVEL: "ERROR"
+      register: artifactory_result
+
+    - name: Log JFrog CLI response
+      ansible.builtin.lineinfile:
+        path: "{{ metadata_log }}"
+        line: "jfrog_response={{ artifactory_result.stdout | default('No response') }}"
+        create: yes
+
+    - name: Render Teams notification JSON dynamically from existing template
+      ansible.builtin.template:
+        src: "new_app_release_teams_notification.json"
+        dest: "/tmp/new_app_release_teams_notification.json"
+        mode: '0644'
+      vars:
+        event_type: "{{ lookup('env', 'EVENT_TYPE') | default('artifact_deployed', true) }}"
+        artifact_name: "{{ lookup('env', 'ARTIFACT_NAME') | default(app_zip_path, true) }}"
+        artifact_size: "{{ artifact_details.stat.size }}"
+        artifact_sha256: "{{ artifact_details.stat.checksum }}"
+        deploy_path: "{{ extract_path }}/{{ app_zip_path | basename | regex_replace('.zip$', '') }}"
+        target_vms: "{{ target_vms | join(', ') }}"
+        artifactory_path: "{{ lookup('env', 'ARTIFACTORY_PATH') | default('mfi-ei-sw-local/playground_bosch_deliveries/ansible-poc', true) }}"
+        artifactory_url_base: "{{ lookup('env', 'ARTIFACTORY_URL_BASE') | default('https://artifactory.boschdevcloud.com/artifactory', true) }}"
+        timestamp: "{{ lookup('pipe', 'date +%Y-%m-%d\\ %H:%M:%S') }}"
+        artifact_repo_key: "{{ artifact_repo_key }}"
+
+    # - name: Send notification to Microsoft Teams
+    #   ansible.builtin.uri:
+    #     url: "{{ teams_webhook_url }}"
+    #     method: POST
+    #     body: "{{ lookup('file', '/tmp/new_app_release_teams_notification.json') }}"
+    #     body_format: json
+    #     headers:
+    #       Content-Type: "application/json"
+    #     status_code: 200
+    #   vars:
+    #     teams_webhook_url: "{{ lookup('env', 'TEAMS_WEBHOOK_URL') }}"
