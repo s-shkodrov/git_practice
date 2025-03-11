@@ -1,0 +1,37 @@
+{
+    "@type": "MessageCard",
+    "@context": "http://schema.org/extensions",
+    "themeColor": "800080",
+    "title": "🎉 Successful ansible deployment in artofactory<br>",
+    "summary": "Summary",
+    "sections": [
+        {
+            "activityTitle": "Details:",
+            "facts": [
+                { "name": "📦 Event type:", "value": "{{ event_type }}" },
+                { "name": "📄 Artefact name:", "value": "{{ artifact_name }}" },
+                { "name": "💾 Repo key:", "value": "{{ artifact_repo_key }}" },
+                { "name": "📂 Path:", "value": "{{ artifactory_path }}/{{ artifact_name }}" },
+                { "name": "📏 Size:", "value": "{{ artifact_size }}" },
+                { "name": "🔒 sha256:", "value": "{{ artifact_sha256 }}" },
+                { "name": "⏰ Timestamp:", "value": "{{ timestamp }}" }
+            ]
+        }
+    ],
+    "potentialAction": [
+        {
+            "@type": "OpenUri",
+            "name": "Open File",
+            "targets": [
+                { "os": "default", "uri": "{{ artifactory_url_base }}/{{ artifactory_path }}/{{ artifact_name }}" }
+            ]
+        },
+        {
+            "@type": "OpenUri",
+            "name": "Open Folder",
+            "targets": [
+                { "os": "default", "uri": "{{ artifactory_url_base }}/{{ artifactory_path }}" }
+            ]
+        }
+    ]
+}
